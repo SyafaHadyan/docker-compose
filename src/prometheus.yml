@@ -1,0 +1,32 @@
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    restart: always
+    ports:
+      - "9090:9090"
+    networks:
+      - localprom
+    volumes:
+      - type: volume
+        source: prometheus-volume
+        target: /prometheus
+      - type: bind
+        source: ~/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+      
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter
+    restart: always
+    ports:
+      - "9100:9100"
+    networks:
+      - localprom
+
+networks:
+  localprom:
+    driver: bridge
+
+volumes:
+  prometheus-volume:
