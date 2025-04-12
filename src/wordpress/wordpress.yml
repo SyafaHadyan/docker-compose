@@ -1,0 +1,98 @@
+services:
+  nginx:
+    container_name: nginx
+    image: nginx
+    restart: always
+    network_mode: host
+    volumes:
+      - type: volume
+        source: nginx-volume
+        target: /etc/nginx
+      - type: volume
+        source: certbot-etc
+        target: /etc/letsencrypt
+      - type: volume
+        source: certbot-var
+        target: /var/lib/letsencrypt
+      - type: bind
+        source: ~/nginx.conf
+        target: /etc/nginx/nginx.conf
+
+  certbot:
+    container_name: certbot
+    image: certbot/certbot
+    restart: always
+    depends_on:
+      - nginx
+
+    command: certonly --reinstall --webroot --webroot-path=/var/lib/letsencrypt -d dev.test.com --non-interactive --agree-tos --email test@gmail.com --no-eff-email
+    volumes:
+      - certbot-etc:/etc/letsencrypt
+      - certbot-var:/var/lib/letsencrypt
+      - nginx-conf:/etc/nginx/conf.d
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+  wordpress:
+    container_name: wordpress
+    image: wordpress
+    restart: always
+    depends_on:
+      - mariadb
+    ports:
+      - 8000:80
+    environment:
+      WORDPRESS_DB_HOST: mariadb
+      WORDPRESS_DB_USER: db_user
+      WORDPRESS_DB_PASSWORD: db_password
+      WORDPRESS_DB_NAME: db_name 
+    volumes:
+      - type: volume
+        source: wordpress-volume
+        target: /var/www/html
+      - type: bind
+        source: ~/docker-uploads.ini
+        target: /usr/local/etc/php/conf.d/docker-uploads.ini
+
+  mariadb:
+    container_name: mariadb
+    image: mariadb 
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: db_name 
+      MYSQL_USER: db_user
+      MYSQL_PASSWORD: db_password
+      MYSQL_ROOT_PASSWORD: db_root_password
+    volumes:
+      - mariadb-volume:/var/lib/mysql
+
+  phpmyadmin:
+    container_name: phpmyadmin
+    image: phpmyadmin
+    restart: always
+    depends_on:
+      - mariadb
+    ports:
+      - 8001:80
+    volumes:
+      - phpmyadmin-volume:/sessions
+
+  redis:
+    container_name: redis
+    image: redis
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-volume:/data
+
+volumes:
+  nginx-volume:
+  nginx-conf:
+  certbot-etc:
+  certbot-var:
+  wordpress-volume:
+  mariadb-volume:
+  phpmyadmin-volume:
+  redis-volume:
